@@ -1,0 +1,7 @@
+{
+  "name": "Chronioñ",
+  "description": "Navegador web moderno, privado y eficiente con bloqueador de anuncios nativo, gestor de extensiones, modo oscuro personalizable y sincronización.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
