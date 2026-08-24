@@ -36,11 +36,12 @@
     }
     </script>
 
-    <!-- Google Fonts & FontAwesome -->
+    <!-- Google Fonts, FontAwesome y Google reCAPTCHA API -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
         :root {
@@ -146,6 +147,13 @@
             max-width: 450px;
         }
 
+        /* Contenedor reCAPTCHA */
+        .captcha-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
         .btn-download {
             display: flex;
             align-items: center;
@@ -160,9 +168,19 @@
             border-radius: 12px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+            border: none;
+            width: 100%;
         }
 
-        .btn-download:hover {
+        /* Estilos de botón deshabilitado */
+        .btn-disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-download:not(.btn-disabled):hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
         }
@@ -248,10 +266,20 @@
         <p>Un navegador web nativo construido desde cero con Jetpack Compose y Kotlin para ofrecer una experiencia ligera y eficiente.</p>
 
         <div class="download-box">
-            <a href="https://github.com/anyelo888ra-ux/chronion.apk-open-source/releases/download/v1.0.0/Chronion-v1.0.0.apk" class="btn-download">
+            <!-- 1. CASILLA DE RECAPTCHA -->
+            <div class="captcha-container">
+                <div class="g-recaptcha" 
+                     data-sitekey="6Ldk1JUtAAAAABdJKftbsgTvItk_ph3ilsNHCTy2" 
+                     data-callback="enableDownload">
+                </div>
+            </div>
+
+            <!-- 2. BOTÓN DE DESCARGA BLOQUEADO INICIALMENTE -->
+            <a id="downloadBtn" href="https://github.com/anyelo888ra-ux/chronion.apk-open-source/releases/download/v1.0.0/Chronion-v1.0.0.apk" class="btn-download btn-disabled">
                 <i class="fa-brands fa-android"></i>
                 Descargar APK
             </a>
+
             <div class="version-info">
                 <span><i class="fa-solid fa-tag"></i> v1.0.0</span>
                 <span><i class="fa-solid fa-file-zipper"></i> ~23.8 MB</span>
@@ -286,6 +314,14 @@
             </a>
         </p>
     </footer>
+
+    <!-- LÓGICA JAVASCRIPT -->
+    <script>
+        function enableDownload() {
+            const btn = document.getElementById('downloadBtn');
+            btn.classList.remove('btn-disabled');
+        }
+    </script>
 
 </body>
 </html>
