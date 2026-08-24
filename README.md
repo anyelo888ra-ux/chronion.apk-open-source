@@ -21,10 +21,10 @@
 1. Clona este repositorio:
    ```bash
    git clone [https://github.com/anyelo888ra-ux/chronion.apk-open-source.git](https://github.com/anyelo888ra-ux/chronion.apk-open-source.git)
-   
-   Abre la carpeta en Android Studio.
+-
+Abre la carpeta en Android Studio.
 
-    Sincroniza Gradle y compila el proyecto (Build > Build APK(s)).
+Sincroniza Gradle y compila el proyecto (Build > Build APK(s)).
 
 📜 Licencia
 
