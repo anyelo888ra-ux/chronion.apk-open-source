@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronioñ Browser | Navegador Web Nativo para Android</title>
+    <meta name="description" content="Descarga Chronioñ Browser, un navegador rápido, privado y personalizable creado para Android.">
+    
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #06b6d4;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-x: hidden;
+        }
+
+        /* Glow Decorativo de Fondo */
+        .glow {
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header {
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--accent);
+        }
+
+        .logo-text {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #06b6d4, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .download-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 20px;
+            display: inline-block;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            margin-bottom: 3rem;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .btn-download {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            text-decoration: none;
+            padding: 1rem 1.8rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        .version-info {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            max-width: 900px;
+            margin: 0 auto 4rem auto;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: left;
+        }
+
+        .feature-card i {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 0.8rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow"></div>
+
+    <header>
+        <div class="logo-container">
+            <i class="fa-solid fa-globe logo-icon"></i>
+            <span class="logo-text">Chronioñ Browser</span>
+        </div>
+    </header>
+
+    <main class="hero">
+        <h1>Navegación Rápida, Privada y Moderna en Android</h1>
+        <p>Un navegador web nativo construido desde cero con Jetpack Compose y Kotlin para ofrecer una experiencia ligera y eficiente.</p>
+
+        <div class="download-box">
+            <a href="https://github.com/anyelo888ra-ux/chronion.apk-open-source/releases/download/v1.0.0/Chronion-v1.0.0.apk" class="btn-download">
+                <i class="fa-brands fa-android"></i>
+                Descargar APK
+            </a>
+            <div class="version-info">
+                <span><i class="fa-solid fa-tag"></i> v1.0.0</span>
+                <span><i class="fa-solid fa-file-zipper"></i> ~23.8 MB</span>
+                <span><i class="fa-solid fa-shield-halved"></i> Debug Build</span>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <i class="fa-solid fa-bolt"></i>
+                <h3>Ultra Rápido</h3>
+                <p>Optimizado para cargar tus páginas favoritas al instante sin procesos innecesarios.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fa-solid fa-lock"></i>
+                <h3>Privacidad</h3>
+                <p>Diseñado para mantener tu navegación privada y protegida en todo momento.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fa-solid fa-code"></i>
+                <h3>Open Source</h3>
+                <p>Código 100% abierto disponible en GitHub para revisión y comunidad.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Chronioñ Browser es un proyecto de código abierto.</p>
+        <p style="margin-top: 5px;">
+            <a href="https://github.com/anyelo888ra-ux/chronion.apk-open-source" target="_blank">
+                <i class="fa-brands fa-github"></i> Ver Código en GitHub
+            </a>
+        </p>
+    </footer>
+
+</body>
+</html>
