@@ -50,6 +50,7 @@
             --primary: #6366f1;
             --primary-hover: #4f46e5;
             --accent: #06b6d4;
+            --success: #10b981;
             --text-main: #f9fafb;
             --text-muted: #9ca3af;
             --border-color: #1f2937;
@@ -193,6 +194,65 @@
             justify-content: space-around;
         }
 
+        /* Sección de Seguridad y Transparencia */
+        .security-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto 3rem auto;
+            text-align: left;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .security-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .security-header i {
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .security-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .security-list {
+            list-style: none;
+            margin: 1.2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .security-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+        }
+
+        .security-list a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .security-note {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            background-color: rgba(31, 41, 55, 0.5);
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+        }
+
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -247,6 +307,7 @@
         @media (max-width: 600px) {
             .hero h1 { font-size: 2rem; }
             .hero p { font-size: 1rem; }
+            .security-section { padding: 1.5rem; }
         }
     </style>
 </head>
@@ -284,6 +345,32 @@
                 <span><i class="fa-solid fa-tag"></i> v1.0.0</span>
                 <span><i class="fa-solid fa-file-zipper"></i> ~23.8 MB</span>
                 <span><i class="fa-solid fa-shield-halved"></i> Debug Build</span>
+            </div>
+        </div>
+
+        <!-- 3. SECCIÓN DE SEGURIDAD Y TRANSPARENCIA -->
+        <div class="security-section">
+            <div class="security-header">
+                <i class="fa-solid fa-shield-virus"></i>
+                <h2>🛡️ Seguridad y Transparencia</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+                Para garantizar la total seguridad de los usuarios y de la comunidad en Twitch y Kick, el binario APK de <strong>Chronioñ</strong> es verificado constantemente de forma abierta.
+            </p>
+
+            <ul class="security-list">
+                <li>
+                    <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                    <span><strong>Estado actual:</strong> 0/70 Detecciones (Totalmente Limpio)</span>
+                </li>
+                <li>
+                    <i class="fa-solid fa-microscope" style="color: var(--accent);"></i>
+                    <span><strong>Reporte de Análisis Oficial:</strong> Puedes verificar los permisos y el estado en vivo a través del <a href="https://www.virustotal.com/gui/file/4fab7c53f669c3768e0d32bed8c53ad07780d80e33910abc684361ce551394da?nocache=1" target="_blank" rel="noopener">Informe de VirusTotal</a>.</span>
+                </li>
+            </ul>
+
+            <div class="security-note">
+                <strong>Nota:</strong> Las advertencias iniciales de Google Play Protect ocurren exclusivamente porque el APK utiliza una clave de depuración automática (Debug Build) generada por GitHub Actions y carece de un certificado comercial de pago.
             </div>
         </div>
 
