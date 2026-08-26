@@ -16,16 +16,40 @@
 
 ---
 
+## 🛡️ Seguridad y Transparencia (Análisis de Malware)
+
+Para garantizar la total seguridad de los usuarios y de la comunidad en Twitch y Kick, el binario APK de **Chronioñ** es verificado constantemente de forma abierta.
+
+* 🟢 **Estado actual:** **0/70 Detecciones (Totalmente Limpio)**
+* 🔬 **Reporte de Análisis Oficial:** Puedes verificar los permisos y el estado en vivo a través del [Informe de VirusTotal](https://www.virustotal.com/gui/file/4fab7c53f669c3768e0d32bed8c53ad07780d80e33910abc684361ce551394da?nocache=1).
+
+*Nota: Las advertencias iniciales de Google Play Protect ocurren exclusivamente porque el APK utiliza una clave de depuración automática (Debug Build) generada por GitHub Actions y carece de un certificado comercial de pago.*
+
+---
+
 ## 🛠️ Requisitos e Instalación
 
-1. Clona este repositorio:
+1. **Clona este repositorio:**
    ```bash
-   git clone [https://github.com/anyelo888ra-ux/chronion.apk-open-source.git](https://github.com/anyelo888ra-ux/chronion.apk-open-source.git)
--
-Abre la carpeta en Android Studio.
+   git clone https://github.com/anyelo888ra-ux/chronion.apk-open-source.git
+   cd chronion.apk-open-source
+   ```
 
-Sincroniza Gradle y compila el proyecto (Build > Build APK(s)).
+2. **Compilación:**
+   * Abre la carpeta del proyecto en **Android Studio**.
+   * Sincroniza los archivos de Gradle.
+   * Compila el proyecto desde el menú superior: `Build > Build Bundle(s) / APK(s) > Build APK(s)`.
 
-📜 Licencia
+---
+
+## 🌐 Página Web Oficial (Landing Page)
+
+El proyecto incluye una interfaz web moderna alojada en GitHub Pages para gestionar las descargas de forma pública y segura. 
+
+El archivo `index.html` base del sitio web cuenta con un sistema de diseño oscuro profesional, distribución responsiva mediante Flexbox/Grid y una pasarela de protección automatizada con la API de **Google reCAPTCHA** para mitigar descargas de bots y asegurar la integridad del servidor.
+
+---
+
+## 📜 Licencia
 
 Proyecto de código abierto desarrollado para la comunidad.
