@@ -1,16 +1,128 @@
-package com.chronion.browser.ui.viewmodel
+package com.example.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chronion.browser.data.*
-import com.chronion.browser.data.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Enums y Clases de Modelo necesarias en el ViewModel
+enum class DownloadCategory { ALL, APKS, DOCUMENTS, IMAGES, MEDIA }
+enum class DownloadStatus { DOWNLOADING, COMPLETED, FAILED, PAUSED }
+enum class TargetLanguage { SPANISH, ENGLISH, FRENCH, GERMAN, CHINESE }
+enum class DarkThemeStyle { SYSTEM, COSMIC_INDIGO, OLED_BLACK }
+enum class SearchEngine { GOOGLE, DUCKDUCKGO, BING } {
+    fun buildQueryUrl(query: String, category: SearchCategory): String {
+        return "https://www.google.com/search?q=${Uri.encode(query)}"
+    }
+}
+enum class SearchCategory { ALL, IMAGES, NEWS, VIDEOS }
+enum class ReaderTheme { SYSTEM, LIGHT, SEPIA, DARK }
+enum class ReaderFont { SANS_SERIF, SERIF, MONOSPACE }
+
+data class DownloadItem(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val fileName: String,
+    val url: String,
+    val totalBytes: Long,
+    val downloadedBytes: Long,
+    val status: DownloadStatus,
+    val category: DownloadCategory
+)
+
+data class DevConsoleMessage(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val type: String,
+    val message: String
+)
+
+data class SpeedDialItem(
+    val title: String,
+    val url: String,
+    val iconDomain: String,
+    val category: String
+)
+
+data class TabItem(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val url: String = "chronion://newtab",
+    val title: String = "Nueva Pestaña",
+    val searchQuery: String = "",
+    val isLoading: Boolean = false,
+    val progress: Int = 0,
+    val isIncognito: Boolean = false,
+    val isDesktopMode: Boolean = false,
+    val isReaderMode: Boolean = false,
+    val canGoBack: Boolean = false,
+    val canGoForward: Boolean = false,
+    val favicon: String? = null,
+    val blockedAdsCount: Int = 0,
+    val blockedTrackersCount: Int = 0,
+    val isFindInPageActive: Boolean = false,
+    val findQuery: String = "",
+    val findMatchesCount: Int = 0,
+    val findActiveMatchOrdinal: Int = 0
+)
+
+data class ReaderArticle(
+    val title: String,
+    val domain: String,
+    val author: String,
+    val publishDate: String,
+    val readingTimeMinutes: Int,
+    val wordCount: Int,
+    val paragraphs: List<String>
+)
+
+data class CloudSyncAccount(val email: String = "", val isSynced: Boolean = false)
+data class Bookmark(val id: Long = 0, val title: String, val url: String, val folder: String = "", val tags: String = "")
+data class HistoryItem(val id: Long = 0, val title: String, val url: String, val timestamp: Long = System.currentTimeMillis())
+data class UserScript(val id: Long = 0, val name: String, val script: String, val isEnabled: Boolean = true)
+
+// Interfaces simuladas para dependencias de repositorio y DB
+interface BrowserRepository {
+    val allBookmarks: StateFlow<List<Bookmark>>
+    val allHistory: StateFlow<List<HistoryItem>>
+    val allScripts: StateFlow<List<UserScript>>
+    val activeScripts: StateFlow<List<UserScript>>
+    suspend fun initDefaultDataIfNeeded()
+    suspend fun addHistory(title: String, url: String, isIncognito: Boolean)
+    suspend fun clearHistory()
+    suspend fun deleteHistoryById(id: Long)
+    suspend fun deleteHistoryBetween(startTime: Long, endTime: Long)
+    suspend fun deleteHistoryOlderThan(timestamp: Long)
+    suspend fun isBookmarked(url: String): Boolean
+    suspend fun addBookmark(title: String, url: String, folder: String = "Favoritos", tags: String = "")
+    suspend fun deleteBookmark(bookmark: Bookmark)
+    suspend fun deleteBookmarksBetween(startTime: Long, endTime: Long)
+    suspend fun syncBookmarksWithCloud(account: CloudSyncAccount): CloudSyncAccount
+    suspend fun toggleScript(script: UserScript)
+    suspend fun saveScript(script: UserScript)
+    suspend fun deleteScript(script: UserScript)
+}
+
+interface SyncRepository {
+    suspend fun exportBookmarksToJson(): String
+    suspend fun importBookmarksFromJson(json: String): Result<Unit>
+    suspend fun syncWithGoogleAccount(token: String): Result<CloudSyncAccount>
+}
+
+interface ExtensionManager {
+    fun toggleScriptForDomain(scriptId: Long, url: String)
+}
+
+interface AppDatabase {
+    fun vacuum()
+}
+
+object AdBlockEngine {
+    fun isTracker(url: String): Boolean = url.contains("tracker") || url.contains("analytics")
+}
+
+// ViewModel Principal
 class BrowserViewModel(
     private val repository: BrowserRepository,
     private val syncRepository: SyncRepository,
@@ -78,7 +190,7 @@ class BrowserViewModel(
 
     // DevTools & Console State
     private val _devConsoleMessages = MutableStateFlow<List<DevConsoleMessage>>(
-        listOf(DevConsoleMessage(type = "INFO", message = "Consola de Chronioñ inicializada."))
+        listOf(DevConsoleMessage(type = "INFO", message = "Consola inicializada."))
     )
     val devConsoleMessages: StateFlow<List<DevConsoleMessage>> = _devConsoleMessages.asStateFlow()
 
@@ -96,7 +208,7 @@ class BrowserViewModel(
     private val _customSpeedDialItems = MutableStateFlow<List<SpeedDialItem>>(
         listOf(
             SpeedDialItem("Google", "https://google.com", "google.com", "Buscadores"),
-            SpeedDialItem("Chronioñ GitHub", "https://github.com", "github.com", "Desarrollo"),
+            SpeedDialItem("GitHub", "https://github.com", "github.com", "Desarrollo"),
             SpeedDialItem("YouTube", "https://youtube.com", "youtube.com", "Media"),
             SpeedDialItem("Wikipedia", "https://wikipedia.org", "wikipedia.org", "Educación"),
             SpeedDialItem("Reddit", "https://reddit.com", "reddit.com", "Comunidad"),
@@ -154,20 +266,13 @@ class BrowserViewModel(
 
     // Data from Database
     val bookmarks: StateFlow<List<Bookmark>> = repository.allBookmarks
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val history: StateFlow<List<HistoryItem>> = repository.allHistory
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val userScripts: StateFlow<List<UserScript>> = repository.allScripts
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val activeScripts: StateFlow<List<UserScript>> = repository.activeScripts
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val speedDialItems = listOf(
         SpeedDialItem("Google", "google.com", "google.com", "Buscadores"),
-        SpeedDialItem("Chronioñ GitHub", "github.com", "github.com", "Desarrollo"),
+        SpeedDialItem("GitHub", "github.com", "github.com", "Desarrollo"),
         SpeedDialItem("YouTube", "youtube.com", "youtube.com", "Media"),
         SpeedDialItem("Wikipedia", "wikipedia.org", "wikipedia.org", "Educación"),
         SpeedDialItem("Reddit", "reddit.com", "reddit.com", "Comunidad"),
@@ -458,13 +563,13 @@ class BrowserViewModel(
     private fun extractReaderArticle(tab: TabItem) {
         val domain = Uri.parse(tab.url).host ?: "web"
         val paragraphs = listOf(
-            "El modo de lectura inteligente de Chronioñ limpia el ruido visual, la publicidad invasiva y los elementos innecesarios para permitir una lectura enfocada, cómoda y ergonómica.",
-            "Los navegadores modernos procesan grandes cantidades de scripts y trackers en segundo plano. Chronioñ optimiza el consumo de batería y memoria RAM al aislar el contenido principal del artículo.",
-            "Puedes personalizar la tipografía entre fuentes Serif editoriales o Sans modernas, además de alternar el esquema cromático entre tonos sepia cálidos para la noche o negro OLED para pantallas AMOLED.",
-            "La velocidad de lectura estimada y el conteo de palabras te ayudan a gestionar tu tiempo de navegación mientras mantienes tus ojos descansados con el filtro de luz azul integrado."
+            "El modo de lectura limpia el ruido visual y la publicidad.",
+            "Optimiza el consumo de recursos al aislar el contenido principal.",
+            "Personaliza tipografía y esquemas cromáticos.",
+            "Mejora la velocidad de lectura gestionando el tiempo en navegación."
         )
         _readerArticle.value = ReaderArticle(
-            title = if (tab.title.isNotBlank() && tab.title != "Nueva Pestaña") tab.title else "Artículo Destacado - $domain",
+            title = if (tab.title.isNotBlank() && tab.title != "Nueva Pestaña") tab.title else "Artículo - $domain",
             domain = domain,
             author = "Chronioñ Reader Engine",
             publishDate = "Hoy",
@@ -531,7 +636,7 @@ class BrowserViewModel(
 
     fun clearConsole() {
         _devConsoleMessages.value = listOf(
-            DevConsoleMessage(type = "INFO", message = "Consola de Chronioñ limpia.")
+            DevConsoleMessage(type = "INFO", message = "Consola limpia.")
         )
     }
 
@@ -541,7 +646,7 @@ class BrowserViewModel(
             when {
                 code.trim() == "document.title" -> "\"${currentTab.title}\""
                 code.trim() == "window.location.href" -> "\"${currentTab.url}\""
-                code.trim() == "navigator.userAgent" -> "\"${if (currentTab.isDesktopMode) "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chronion/2.4" else "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chronion/2.4"}\""
+                code.trim() == "navigator.userAgent" -> "\"${if (currentTab.isDesktopMode) "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" else "Mozilla/5.0 (Android)"}\""
                 code.contains("alert") -> "undefined [Alerta mostrada]"
                 code.contains("+") || code.contains("*") || code.contains("/") || code.contains("-") -> "42"
                 else -> "undefined"
@@ -564,7 +669,7 @@ class BrowserViewModel(
             delay(1000)
             _isTranslating.value = false
             _isPageTranslated.value = true
-            addDevConsoleMessage("INFO", "Página traducida al ${lang.name} exitosamente con Google Translate Engine.")
+            addDevConsoleMessage("INFO", "Página traducida al ${lang.name} exitosamente.")
         }
     }
 
@@ -628,7 +733,7 @@ class BrowserViewModel(
         }
     }
 
-    // JSON Backup and SHA-256 Verified Sync
+    // JSON Backup and Sync
     fun exportBookmarksToJson(onResult: (Result<String>) -> Unit) {
         viewModelScope.launch {
             try {
@@ -647,7 +752,7 @@ class BrowserViewModel(
         }
     }
 
-    fun syncWithGoogleAccount(token: String = "oauth2_chronion_bearer_token", onComplete: ((Boolean) -> Unit)? = null) {
+    fun syncWithGoogleAccount(token: String = "bearer_token", onComplete: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch {
             _isSyncing.value = true
             val result = syncRepository.syncWithGoogleAccount(token)
@@ -661,12 +766,11 @@ class BrowserViewModel(
         }
     }
 
-    // Domain-level extension toggling
+    // Extensions and DB Optimization
     fun toggleScriptForDomain(scriptId: Long, url: String) {
         extensionManager.toggleScriptForDomain(scriptId, url)
     }
 
-    // SQLite Database Maintenance & Optimization
     fun optimizeDatabase(onComplete: (() -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             db.vacuum()
