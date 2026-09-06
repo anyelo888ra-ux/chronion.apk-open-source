@@ -7,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,12 +38,10 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,13 +59,13 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.SearchCategory
 import com.example.data.model.TabItem
 import com.example.ui.theme.ShieldGreen
@@ -92,7 +89,9 @@ fun OmniboxAddressBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var totalDragX by remember { mutableFloatStateOf(0f) }
-    val sessionBlockedCount by viewModel.sessionBlockedAdsCount.collectAsStateWithLifecycle()
+
+    // Sincronización del estado del motor AdBlock de Chronioñ
+    val sessionBlockedCount by viewModel.sessionBlockedAdsCount.collectAsStateWithLifecycle(initialValue = 0)
 
     Surface(
         modifier = modifier
@@ -171,7 +170,7 @@ fun OmniboxAddressBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // Left Icon in Box
+                        // Left Icon in Box based on current security state
                         if (tab.isIncognito) {
                             Icon(
                                 imageVector = Icons.Default.VisibilityOff,
@@ -188,7 +187,7 @@ fun OmniboxAddressBar(
                             )
                         }
 
-                        // Text Field
+                        // Text Field Core
                         BasicTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
@@ -269,7 +268,7 @@ fun OmniboxAddressBar(
                 ) {
                     Icon(
                         imageVector = if (tab.isIncognito) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (tab.isIncognito) "Modo Incógnito Activo (Toca para Estándar)" else "Activar Modo Incógnito",
+                        contentDescription = if (tab.isIncognito) "Modo Incógnito Activo" else "Activar Modo Incógnito",
                         tint = if (tab.isIncognito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
@@ -304,7 +303,7 @@ fun OmniboxAddressBar(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    items(SearchCategory.values()) { cat ->
+                    items(SearchCategory.entries.toTypedArray()) { cat ->
                         FilterChip(
                             selected = selectedCategory == cat,
                             onClick = {
@@ -316,7 +315,7 @@ fun OmniboxAddressBar(
                             },
                             label = {
                                 Text(
-                                    text = cat.label,
+                                    text = cat.name,
                                     fontSize = 12.sp,
                                     fontWeight = if (selectedCategory == cat) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -331,7 +330,7 @@ fun OmniboxAddressBar(
                 }
             }
 
-            // Stylized Loading Progress Indicator with Smooth Animation & Gradient
+            // Stylized Loading Progress Indicator with Smooth Animation & Custom Gradient
             if (tab.isLoading && tab.progress in 1..99) {
                 val animatedProgress by animateFloatAsState(
                     targetValue = (tab.progress / 100f).coerceIn(0.05f, 1f),
