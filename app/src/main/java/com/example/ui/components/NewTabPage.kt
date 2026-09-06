@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,12 +24,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.GTranslate
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,8 +47,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.adblock.AdBlockEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +60,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.data.adblock.AdBlockEngine
 import com.example.data.model.SearchCategory
 import com.example.data.model.SearchEngine
 import com.example.data.model.SpeedDialItem
@@ -85,7 +84,8 @@ fun NewTabPage(
     var searchInput by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(SearchCategory.ALL) }
     var showAddSpeedDialDialog by remember { mutableStateOf(false) }
-    val sessionBlockedCount by AdBlockEngine.sessionBlockedCount.collectAsStateWithLifecycle()
+
+    val sessionBlockedCount by viewModel.sessionBlockedAdsCount.collectAsStateWithLifecycle(initialValue = 0)
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -213,7 +213,7 @@ fun NewTabPage(
                                             viewModel.navigateTo(searchInput, cat)
                                         }
                                     },
-                                    label = { Text(cat.label, fontSize = 11.sp) },
+                                    label = { Text(cat.name, fontSize = 11.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -263,7 +263,6 @@ fun NewTabPage(
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
-
                             Column {
                                 Text(
                                     text = "Protección Chronioñ Activa",
@@ -278,7 +277,6 @@ fun NewTabPage(
                                 )
                             }
                         }
-
                         Column(horizontalAlignment = Alignment.End) {
                             val liveCount = maxOf(totalAdsBlocked + totalTrackersBlocked, sessionBlockedCount)
                             Text(
@@ -315,7 +313,11 @@ fun NewTabPage(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         TextButton(onClick = { showAddSpeedDialDialog = true }) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Añadir", fontSize = 12.sp)
                         }
@@ -353,7 +355,6 @@ fun NewTabPage(
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                         }
-
                                         Text(
                                             text = item.title,
                                             fontSize = 11.sp,
@@ -363,6 +364,9 @@ fun NewTabPage(
                                             color = MaterialTheme.colorScheme.onBackground
                                         )
                                     }
+                                }
+                                if (rowItems.size < 4) {
+                                    Spacer(modifier = Modifier.width((72 * (4 - rowItems.size)).dp))
                                 }
                             }
                         }
@@ -382,7 +386,6 @@ fun NewTabPage(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -411,7 +414,6 @@ fun NewTabPage(
                                 }
                             }
                         }
-
                         Card(
                             modifier = Modifier
                                 .weight(1f)
@@ -437,7 +439,6 @@ fun NewTabPage(
                             }
                         }
                     }
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -466,7 +467,6 @@ fun NewTabPage(
                                 }
                             }
                         }
-
                         Card(
                             modifier = Modifier
                                 .weight(1f)
@@ -500,7 +500,6 @@ fun NewTabPage(
     if (showAddSpeedDialDialog) {
         var titleInput by remember { mutableStateOf("") }
         var urlInput by remember { mutableStateOf("") }
-
         AlertDialog(
             onDismissRequest = { showAddSpeedDialDialog = false },
             title = { Text("Añadir Sitio Frecuente") },
@@ -545,4 +544,3 @@ fun NewTabPage(
         )
     }
 }
-
