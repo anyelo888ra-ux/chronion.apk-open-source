@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.UserScript
 import com.example.viewmodel.BrowserViewModel
 
@@ -65,6 +68,11 @@ fun ExtensionsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var editingScript by remember { mutableStateOf<UserScript?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
+
+    val currentUrl = viewModel.currentTab.url
+    val currentHost = remember(currentUrl) { viewModel.extensionManager.extractHost(currentUrl) }
+    val domainDisabledMap by viewModel.extensionManager.domainDisabledScripts.collectAsStateWithLifecycle()
+    val disabledForCurrentHost = domainDisabledMap[currentHost] ?: emptySet()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -117,6 +125,28 @@ fun ExtensionsSheet(
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (currentHost.isNotBlank() && !currentUrl.startsWith("chronion://")) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = "Sitio actual: $currentHost",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
 
             // Scripts List
             LazyColumn(
@@ -212,6 +242,31 @@ fun ExtensionsSheet(
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
+                                    }
+                                }
+                            }
+
+                            if (currentHost.isNotBlank() && !currentUrl.startsWith("chronion://")) {
+                                val isScriptDisabledOnDomain = disabledForCurrentHost.contains(script.id)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Estado en $currentHost: ${if (!isScriptDisabledOnDomain && script.isEnabled) "Activo" else "Pausado"}",
+                                        fontSize = 11.sp,
+                                        color = if (!isScriptDisabledOnDomain && script.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    TextButton(
+                                        onClick = { viewModel.toggleScriptForDomain(script.id, currentUrl) },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        modifier = Modifier.height(28.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isScriptDisabledOnDomain) "Reactivar en este sitio" else "Pausar solo en este sitio",
+                                            fontSize = 10.sp
+                                        )
                                     }
                                 }
                             }
