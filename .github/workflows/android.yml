@@ -21,17 +21,12 @@ jobs:
       with:
         gradle-version: '9.3.1'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    # Genera el almacén de claves de depuración simulado en la raíz
     - name: Generate Dummy Debug Keystore
       run: |
         keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-    # Se cambia "gradle" por "./gradlew" para máxima compatibilidad con tu wrapper
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon -x validateSigningDebug
+      run: gradle assembleDebug --no-daemon -x validateSigningDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
