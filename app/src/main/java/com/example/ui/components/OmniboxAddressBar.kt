@@ -1,6 +1,9 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -52,11 +56,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -86,6 +92,7 @@ fun OmniboxAddressBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var totalDragX by remember { mutableFloatStateOf(0f) }
+    val sessionBlockedCount by viewModel.sessionBlockedAdsCount.collectAsStateWithLifecycle()
 
     Surface(
         modifier = modifier
@@ -123,7 +130,7 @@ fun OmniboxAddressBar(
                         .size(40.dp)
                         .testTag("shield_button")
                 ) {
-                    val totalBlocked = tab.blockedAdsCount + tab.blockedTrackersCount
+                    val totalBlocked = maxOf(tab.blockedAdsCount + tab.blockedTrackersCount, sessionBlockedCount)
                     BadgedBox(
                         badge = {
                             if (totalBlocked > 0) {
@@ -253,18 +260,33 @@ fun OmniboxAddressBar(
                     }
                 }
 
+                // Instant Incognito Mode Toggle Button
+                IconButton(
+                    onClick = { viewModel.toggleIncognitoMode() },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .testTag("toggle_incognito_button")
+                ) {
+                    Icon(
+                        imageVector = if (tab.isIncognito) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (tab.isIncognito) "Modo Incógnito Activo (Toca para Estándar)" else "Activar Modo Incógnito",
+                        tint = if (tab.isIncognito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
                 // Advanced Filter / Search Categories Trigger
                 IconButton(
                     onClick = { viewModel.setAdvancedSearchSheetVisible(true) },
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(38.dp)
                         .testTag("advanced_search_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
                         contentDescription = "Filtros de Búsqueda Avanzada",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -309,16 +331,34 @@ fun OmniboxAddressBar(
                 }
             }
 
-            // Linear Progress Indicator
+            // Stylized Loading Progress Indicator with Smooth Animation & Gradient
             if (tab.isLoading && tab.progress in 1..99) {
-                LinearProgressIndicator(
-                    progress = { tab.progress / 100f },
+                val animatedProgress by animateFloatAsState(
+                    targetValue = (tab.progress / 100f).coerceIn(0.05f, 1f),
+                    animationSpec = tween(durationMillis = 200, easing = LinearEasing),
+                    label = "omnibox_progress"
+                )
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(2.5.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.Transparent
-                )
+                        .height(3.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .height(3.dp)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.secondary,
+                                        ShieldGreen
+                                    )
+                                )
+                            )
+                    )
+                }
             }
         }
     }
