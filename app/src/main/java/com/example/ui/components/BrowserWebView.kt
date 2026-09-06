@@ -75,7 +75,8 @@ fun BrowserWebView(
                 request: WebResourceRequest?
             ): WebResourceResponse? {
                 val url = request?.url?.toString() ?: return null
-                if (AdBlockEngine.shouldBlockUrl(url, isAdBlockEnabled, whitelistedDomains)) {
+                if (AdBlockEngine.shouldBlockRequest(url, isAdBlockEnabled, whitelistedDomains)) {
+                    AdBlockEngine.incrementSessionBlockedCount()
                     viewModel.recordBlockedItem(url)
                     return AdBlockEngine.createEmptyResourceResponse()
                 }
@@ -122,12 +123,9 @@ fun BrowserWebView(
                     view?.evaluateJavascript(darkReader, null)
                 }
 
-                // Inject UserScripts
-                activeScripts.forEach { script ->
-                    if (script.isEnabled && script.jsCode.isNotBlank()) {
-                        view?.evaluateJavascript(script.jsCode, null)
-                    }
-                }
+                // Inject UserScripts via ExtensionManager (with domain matching)
+                val targetView = view ?: webView
+                viewModel.extensionManager.injectExtensions(targetView, currentUrl, activeScripts)
             }
         }
 
