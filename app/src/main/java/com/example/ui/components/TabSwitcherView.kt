@@ -42,26 +42,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.TabItem
 import com.example.ui.theme.ShieldGreen
 import com.example.viewmodel.BrowserViewModel
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun TabSwitcherView(
@@ -235,123 +244,160 @@ fun TabSwitcherView(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(displayedTabs, key = { it.id }) { tab ->
-                        val isActive = tab.id == activeTabId
-                        Card(
+                        SwipeableTabCard(
+                            tab = tab,
+                            isActive = tab.id == activeTabId,
+                            onSelect = { viewModel.selectTab(tab.id) },
+                            onClose = { viewModel.closeTab(tab.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwipeableTabCard(
+    tab: TabItem,
+    isActive: Boolean,
+    onSelect: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val animatedOffset by animateFloatAsState(targetValue = offsetX, label = "tab_swipe_offset")
+    val cardAlpha = (1f - (abs(animatedOffset) / 300f)).coerceIn(0.15f, 1f)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(190.dp)
+            .offset { IntOffset(animatedOffset.roundToInt(), 0) }
+            .alpha(cardAlpha)
+            .pointerInput(tab.id) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (abs(offsetX) > 140f) {
+                            onClose()
+                        } else {
+                            offsetX = 0f
+                        }
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        offsetX += dragAmount
+                    }
+                )
+            }
+            .clip(RoundedCornerShape(12.dp))
+            .border(
+                width = if (isActive) 2.dp else 1.dp,
+                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable { onSelect() }
+            .testTag("tab_card_${tab.id}"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 6.dp else 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Card Title Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = if (tab.isIncognito) Icons.Default.VisibilityOff else Icons.Default.Language,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = tab.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 12.sp,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(22.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar pestaña",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            // Card Content Preview Area
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (tab.url == "chronion://newtab") "Inicio Chronioñ" else tab.url.removePrefix("https://").removePrefix("http://"),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+
+                    val totalBlocked = tab.blockedAdsCount + tab.blockedTrackersCount
+                    if (totalBlocked > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(190.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(
-                                    width = if (isActive) 2.dp else 1.dp,
-                                    color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { viewModel.selectTab(tab.id) }
-                                .testTag("tab_card_${tab.id}"),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 6.dp else 2.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(ShieldGreen.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                // Card Title Bar
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (tab.isIncognito) Icons.Default.VisibilityOff else Icons.Default.Language,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(
-                                            text = tab.title,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = { viewModel.closeTab(tab.id) },
-                                        modifier = Modifier.size(22.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Cerrar pestaña",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-
-                                // Card Content Preview Area
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    MaterialTheme.colorScheme.surfaceVariant,
-                                                    MaterialTheme.colorScheme.surface
-                                                )
-                                            )
-                                        )
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = if (tab.url == "chronion://newtab") "Inicio Chronioñ" else tab.url.removePrefix("https://").removePrefix("http://"),
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center
-                                        )
-
-                                        val totalBlocked = tab.blockedAdsCount + tab.blockedTrackersCount
-                                        if (totalBlocked > 0) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(ShieldGreen.copy(alpha = 0.15f))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Icon(Icons.Default.Security, contentDescription = null, tint = ShieldGreen, modifier = Modifier.size(12.dp))
-                                                Text(
-                                                    text = "$totalBlocked bloqueados",
-                                                    fontSize = 10.sp,
-                                                    color = ShieldGreen,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            Icon(Icons.Default.Security, contentDescription = null, tint = ShieldGreen, modifier = Modifier.size(12.dp))
+                            Text(
+                                text = "$totalBlocked bloqueados",
+                                fontSize = 10.sp,
+                                color = ShieldGreen,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
 }
