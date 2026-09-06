@@ -48,6 +48,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.adblock.AdBlockEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,6 +85,7 @@ fun NewTabPage(
     var searchInput by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(SearchCategory.ALL) }
     var showAddSpeedDialDialog by remember { mutableStateOf(false) }
+    val sessionBlockedCount by AdBlockEngine.sessionBlockedCount.collectAsStateWithLifecycle()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -277,8 +280,9 @@ fun NewTabPage(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
+                            val liveCount = maxOf(totalAdsBlocked + totalTrackersBlocked, sessionBlockedCount)
                             Text(
-                                text = "${totalAdsBlocked + totalTrackersBlocked}",
+                                text = "$liveCount",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = ShieldGreen
