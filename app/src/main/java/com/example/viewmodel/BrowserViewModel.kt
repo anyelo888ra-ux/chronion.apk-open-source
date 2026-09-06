@@ -22,19 +22,26 @@ import com.example.data.model.SearchEngine
 import com.example.data.model.SpeedDialItem
 import com.example.data.model.TabItem
 import com.example.data.model.TargetLanguage
+import com.example.data.extensions.ExtensionManager
 import com.example.data.model.UserScript
 import com.example.data.repository.BrowserRepository
+import com.example.data.repository.SyncRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = ChronionDatabase.getDatabase(application)
     val repository = BrowserRepository(db.bookmarkDao(), db.historyDao(), db.userScriptDao())
+    val syncRepository = SyncRepository(db.bookmarkDao())
+    val extensionManager = ExtensionManager(repository, application, viewModelScope)
+    val sessionBlockedAdsCount = AdBlockEngine.sessionBlockedCount
 
     // Tabs Management
     private val _tabs = MutableStateFlow<List<TabItem>>(listOf(TabItem()))
@@ -317,6 +324,30 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val currentIndex = list.indexOfFirst { it.id == _activeTabId.value }
         val prevIndex = if (currentIndex - 1 < 0) list.size - 1 else currentIndex - 1
         _activeTabId.value = list[prevIndex].id
+    }
+
+    /**
+     * Instantly toggle between Incognito browsing and Standard browsing.
+     * If current tab is standard, switches to an incognito tab (or opens one).
+     * If current tab is incognito, switches to a standard tab (or opens one).
+     */
+    fun toggleIncognitoMode() {
+        val current = currentTab
+        if (current.isIncognito) {
+            val regularTab = _tabs.value.find { !it.isIncognito }
+            if (regularTab != null) {
+                selectTab(regularTab.id)
+            } else {
+                createNewTab(isIncognito = false)
+            }
+        } else {
+            val incognitoTab = _tabs.value.find { it.isIncognito }
+            if (incognitoTab != null) {
+                selectTab(incognitoTab.id)
+            } else {
+                createNewTab(isIncognito = true)
+            }
+        }
     }
 
     // Navigation & URL Handling
@@ -657,6 +688,78 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun clearBrowsingHistory() {
         viewModelScope.launch {
             repository.clearHistory()
+        }
+    }
+
+    fun deleteHistoryItem(id: Long) {
+        viewModelScope.launch {
+            repository.deleteHistoryById(id)
+        }
+    }
+
+    fun deleteHistoryBetween(startTime: Long, endTime: Long) {
+        viewModelScope.launch {
+            repository.deleteHistoryBetween(startTime, endTime)
+        }
+    }
+
+    fun deleteHistoryOlderThan(timestamp: Long) {
+        viewModelScope.launch {
+            repository.deleteHistoryOlderThan(timestamp)
+        }
+    }
+
+    fun deleteBookmarksBetween(startTime: Long, endTime: Long) {
+        viewModelScope.launch {
+            repository.deleteBookmarksBetween(startTime, endTime)
+        }
+    }
+
+    // JSON Backup and SHA-256 Verified Sync
+    fun exportBookmarksToJson(onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = syncRepository.exportBookmarksToJson()
+                onResult(Result.success(json))
+            } catch (e: Exception) {
+                onResult(Result.failure(e))
+            }
+        }
+    }
+
+    fun importBookmarksFromJson(json: String, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch {
+            val result = syncRepository.importBookmarksFromJson(json)
+            onResult(result)
+        }
+    }
+
+    fun syncWithGoogleAccount(token: String = "oauth2_chronion_bearer_token", onComplete: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            val result = syncRepository.syncWithGoogleAccount(token)
+            result.onSuccess { updatedAccount ->
+                _cloudAccount.value = updatedAccount
+                onComplete?.invoke(true)
+            }.onFailure {
+                onComplete?.invoke(false)
+            }
+            _isSyncing.value = false
+        }
+    }
+
+    // Domain-level extension toggling
+    fun toggleScriptForDomain(scriptId: Long, url: String) {
+        extensionManager.toggleScriptForDomain(scriptId, url)
+    }
+
+    // SQLite Database Maintenance & Optimization
+    fun optimizeDatabase(onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.vacuum()
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke()
+            }
         }
     }
 }
