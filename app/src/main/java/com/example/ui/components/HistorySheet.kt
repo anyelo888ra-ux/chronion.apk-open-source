@@ -19,22 +19,27 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,6 +69,8 @@ fun HistorySheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
+    var showClearDialog by remember { mutableStateOf(false) }
+    var vacuumStatus by remember { mutableStateOf<String?>(null) }
 
     val filteredHistory = history.filter {
         searchQuery.isBlank() ||
@@ -109,7 +116,7 @@ fun HistorySheet(
 
                 Row {
                     if (history.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearBrowsingHistory() }) {
+                        IconButton(onClick = { showClearDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Limpiar Historial", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -209,11 +216,142 @@ fun HistorySheet(
                                         )
                                     }
                                 }
+
+                                IconButton(
+                                    onClick = { viewModel.deleteHistoryItem(item.id) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Eliminar elemento",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    // Clean History & Database Optimization Dialog
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showClearDialog = false
+                vacuumStatus = null
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Text("Limpiar Historial y Optimizar")
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Selecciona el rango de tiempo a eliminar:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Button(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            viewModel.deleteHistoryBetween(now - 3600_000L, now)
+                            showClearDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Última hora", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    Button(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            viewModel.deleteHistoryBetween(now - 86400_000L, now)
+                            showClearDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Últimas 24 horas", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    Button(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            viewModel.deleteHistoryBetween(now - 7 * 86400_000L, now)
+                            showClearDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Últimos 7 días", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.clearBrowsingHistory()
+                            showClearDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Todo el historial")
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.optimizeDatabase {
+                                vacuumStatus = "Base de datos compactada y optimizada con éxito."
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    ) {
+                        Icon(Icons.Default.Build, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Optimizar Base de Datos (VACUUM)", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
+                    }
+
+                    vacuumStatus?.let { status ->
+                        Text(
+                            text = status,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showClearDialog = false
+                        vacuumStatus = null
+                    }
+                ) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 }
